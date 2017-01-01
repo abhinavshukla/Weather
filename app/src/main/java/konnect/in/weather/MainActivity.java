@@ -53,6 +53,7 @@ import controllers.WebserviceController;
 import interfaces.WebControllerInterface;
 import model.CityModel;
 import model.Weather;
+import utils.ConnectionDetector;
 import utils.JSONWeatherParser;
 import utils.LinksAndKeys;
 
@@ -68,7 +69,7 @@ public class MainActivity extends AppCompatActivity implements WebControllerInte
     RelativeLayout relativeLayout1,relativeLayout2;
     LinearLayout linearLayout;
     ImageView searchButton,logoImage;
-
+    ConnectionDetector connectionDetector;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -84,8 +85,10 @@ public class MainActivity extends AppCompatActivity implements WebControllerInte
                             getSystemService(Context.INPUT_METHOD_SERVICE);
 
                     inputManager.hideSoftInputFromWindow(editTextCity.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
-
+                    if(connectionDetector.isConnectedToInternet())
                     searchResult(editTextCity.getText().toString(),"q");
+                    else
+                        Toast.makeText(getApplicationContext(),"Oops you don't have internet connection",Toast.LENGTH_LONG).show();
 
                     return true;
                 }
@@ -108,6 +111,7 @@ public class MainActivity extends AppCompatActivity implements WebControllerInte
             public void afterTextChanged(Editable s) {
                if(editTextCity.getText().toString().length()>=4)
                {
+                   if(connectionDetector.isConnectedToInternet())
                   getCity(editTextCity.getText().toString());
                }
 
@@ -132,6 +136,7 @@ public class MainActivity extends AppCompatActivity implements WebControllerInte
 
         tx=(TextView)findViewById(R.id.tx);
         logoImage=(ImageView)findViewById(R.id.logo);
+        connectionDetector =new ConnectionDetector(this);
         relativeLayout1=(RelativeLayout)findViewById(R.id.layout);
         linearLayout=(LinearLayout)findViewById(R.id.layout1);
         editTextCity=(AutoCompleteTextView)findViewById(R.id.cityEdit);
@@ -145,7 +150,10 @@ public class MainActivity extends AppCompatActivity implements WebControllerInte
                 requestLocationPermission();
         if(isReadLocationAllowed())
         {
+            if(connectionDetector.isConnectedToInternet())
             getLocation();
+            else
+                Toast.makeText(this,"Oops you don't have internet connection",Toast.LENGTH_LONG).show();
         }
         //mapFragment.getMapAsync(this);
     }
@@ -249,8 +257,10 @@ public class MainActivity extends AppCompatActivity implements WebControllerInte
             if(grantResults.length >0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
 
                 //Displaying a toast
-                Toast.makeText(this,"Permission granted now you can read the storage",Toast.LENGTH_LONG).show();
+                if(connectionDetector.isConnectedToInternet())
                 getLocation();
+                else
+                    Toast.makeText(this,"Oops you don't have internet connection",Toast.LENGTH_LONG).show();
             }else{
                 //Displaying another toast if permission is not granted
                 Toast.makeText(this,"Oops you just denied the permission",Toast.LENGTH_LONG).show();
@@ -298,7 +308,10 @@ public class MainActivity extends AppCompatActivity implements WebControllerInte
                         }
                         if(!cityID.equals(""))
                         {
+                            if(connectionDetector.isConnectedToInternet())
                             searchResult(cityID,"id");
+                            else
+                                Toast.makeText(getApplicationContext(),"Oops you don't have internet connection",Toast.LENGTH_LONG).show();
                         }
 
                         Log.e("CityID",cityID);
@@ -313,20 +326,24 @@ public class MainActivity extends AppCompatActivity implements WebControllerInte
             Log.e("esponseCode","esponseCode"+responseCode);
             if(responseCode==200)
             {
+                Log.e("esponseCode","esponseCode"+responseCode);
                 mapFragment.getView().setVisibility(View.VISIBLE);
                 linearLayout.setVisibility(View.VISIBLE);
                 relativeLayout1.setVisibility(View.GONE);
                 logoImage.setVisibility(View.VISIBLE);
                 textViewmsg.setVisibility(View.GONE);
                 Weather weather = new Weather();
+                Log.e("cod","ok");
                 try {
                     weather = JSONWeatherParser.getWeather(responseString);
+                    Log.e("cod",weather.location.getCod());
                     if(weather.location.getCod().equals("200"))
                     {
                         String weatherData="<div><span style='color: #0000ff;'>"+weather.location.getCity()+"</span> <span style='color: #333333;'>right now "+weather.temperature.getTemp()+"℃ "+weather.currentCondition.getDescr()+"</span></div>";
                         lat=weather.location.getLatitude();
                         lon=weather.location.getLongitude();
                         mapFragment.getMapAsync(this);
+                        Log.e("data",weatherData);
                         tx.setText(Html.fromHtml(weatherData));
                         Picasso.with(this).load(LinksAndKeys.IMG_URL+weather.currentCondition.getIcon()+".png").into(logoImage);
                     }
@@ -342,6 +359,7 @@ public class MainActivity extends AppCompatActivity implements WebControllerInte
 
 
                 } catch (JSONException e) {
+                    Log.e("cod",""+e.getMessage());
                     e.printStackTrace();
                 }
             }
@@ -369,4 +387,6 @@ public class MainActivity extends AppCompatActivity implements WebControllerInte
         mMap.addMarker(new MarkerOptions().position(latLng).title("Map"));
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,8));
     }
+
+
 }
